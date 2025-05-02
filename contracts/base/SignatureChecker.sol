@@ -59,7 +59,13 @@ abstract contract SignatureChecker is HashManager, ISignatureValidatorConstants 
         if (ISignatureValidator(smartContract).isValidSignature(dataHash, contractSignature) != EIP1271_MAGIC_VALUE) revert WrongSignature();
     }
 
-    function _recoverSigner(address executor, bytes32 dataHash, bytes calldata signatures, uint256 pos) internal view returns (address owner) {
+    function _recoverSigner(
+        address executor,
+        bytes32 dataHash,
+        bytes calldata signatures,
+        uint256 pos,
+        uint256 requiredSignatures
+    ) internal view returns (address owner) {
         (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(signatures, pos);
 
         if (v == 0) {
@@ -67,14 +73,14 @@ abstract contract SignatureChecker is HashManager, ISignatureValidatorConstants 
             owner = address(uint160(uint256(r)));
 
             // Check that the pointer (s) is pointing out of valid signature range
-            if (uint256(s) < signatures.length * 65) revert WrongSignature();
+            if (uint256(s) < requiredSignatures * 65) revert WrongSignature();
 
             _checkContractSignature(owner, dataHash, signatures, uint256(s));
         } else if (v == 1) {
             owner = address(uint160(uint256(r)));
 
             if (executor != owner && !approvedHashes[owner][dataHash]) revert WrongSignature();
-        } else if (v == 30) {
+        } else if (v > 30) {
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
             owner = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
         } else {
