@@ -12,7 +12,9 @@ abstract contract OwnerManager is SelfAuthorized {
     // SENTINEL_OWNERS is used to traverse `owners`, so that:
     //      1. `owners[SENTINEL_OWNERS]` contains the first owner
     //      2. `owners[last_owner]` points back to SENTINEL_OWNERS
+    /* solhint-disable private-vars-leading-underscore */
     address internal constant SENTINEL_OWNERS = address(0x1);
+    /* solhint-enable private-vars-leading-underscore */
 
     error AlreadyInitialized();
 
