@@ -39,7 +39,7 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
     }
 
     function execTransaction(address to, uint256 value, bytes calldata data, Operation operation, bytes calldata signatures) external payable {
-        bytes32 txHash = getTransactionHash(to, value, data, operation, nonce++); // Transaction info
+        bytes32 txHash = getTransactionHash(to, value, data, operation, nonce++);
         checkSignatures(msg.sender, txHash, signatures);
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
@@ -67,13 +67,13 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
     function checkSignatures(address executor, bytes32 dataHash, bytes calldata signatures) public view {
         uint256 nSignatures = _threshold;
 
-        if (signatures.length < 65 * nSignatures) revert WrongSignatureLength();
+        if (signatures.length < nSignatures * 65) revert WrongSignatureLength();
 
         address lastOwner = address(0);
         address currentOwner;
 
         for (uint256 i = 0; i < nSignatures; ++i) {
-            currentOwner = _recoverSigner(executor, dataHash, signatures, i);
+            currentOwner = _recoverSigner(executor, dataHash, signatures, i, nSignatures);
 
             if (currentOwner <= lastOwner || _owners[currentOwner] == address(0) || currentOwner == SENTINEL_OWNERS) revert WrongSignature();
             lastOwner = currentOwner;
