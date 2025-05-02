@@ -2,7 +2,7 @@ import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import {ethers} from "hardhat";
 
-import {owners, threshold} from "../utils/constants";
+import {Owners, Threshold} from "../utils/constants";
 
 const version = "v1.0.0";
 const contractName = "MultiSigWallet";
@@ -13,7 +13,8 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
     console.log(`\nDeploying ${contractName} ... \ndeployer: ${deployer.address}\n`);
 
-    const constructorArgs = [owners, threshold];
+    let constructorArgs = [Owners, Threshold];
+    if (hre.network.name === "hardhat") constructorArgs = [[deployer.address], 1]; // Default for testing
 
     const result = await deploy(contractName, {
         from: deployer.address,
@@ -21,16 +22,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         args: constructorArgs,
     });
 
-    try {
-        console.log("Verifying...");
-        await hre.run("verify:verify", {
-            address: result.address,
-            contract: `contracts/${contractName}.sol:${contractName}`,
-            constructorArguments: constructorArgs,
-        });
-    } catch (error) {
-        console.log("Verification failed:", error);
-    }
+    console.log(`\n${contractName} deployed to: ${result.address}`);
 
     return true;
 };
