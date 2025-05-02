@@ -10,7 +10,7 @@ abstract contract HashManager {
     // User to data hash mapping
     mapping(address => mapping(bytes32 => bool)) public approvedHashes;
 
-    function approveHash(bytes32 hashToApprove) external virtual {
+    function approveHash(bytes32 hashToApprove) public virtual {
         approvedHashes[msg.sender][hashToApprove] = true;
 
         emit HashApproved(hashToApprove, msg.sender);
