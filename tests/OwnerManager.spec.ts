@@ -2,10 +2,10 @@ import {expect} from "chai";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ethers} from "hardhat";
 
-import type {MultiSigWallet} from "../typechain-types";
-
-import {buildContractCall, signTypedData, buildSignatureBytes, calculateTransactionHash} from "../utils/execution";
+import {buildContractCall, signTypedData, buildSignatureBytes} from "../utils/execution";
 import {AddressOne} from "../utils/constants";
+
+import type {MultiSigWallet} from "../typechain-types";
 
 export default async function suite(): Promise<void> {
     describe("OwnerManager", function () {
@@ -296,9 +296,7 @@ export default async function suite(): Promise<void> {
 
                 const signatureBytes3 = buildSignatureBytes([signature3]);
 
-                await expect(
-                    multiSigWallet.connect(user1).execTransaction(tx3.to, tx3.value, tx3.data, tx3.operation, signatureBytes3)
-                ).to.be.not.reverted;
+                await expect(multiSigWallet.connect(user1).execTransaction(tx3.to, tx3.value, tx3.data, tx3.operation, signatureBytes3)).to.be.not.reverted;
 
                 expect(await multiSigWallet.getThreshold()).to.equal(2n);
             });
