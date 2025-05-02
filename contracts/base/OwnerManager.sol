@@ -88,7 +88,7 @@ abstract contract OwnerManager is SelfAuthorized {
     }
 
     function changeThreshold(uint256 threshold) public authorized {
-        // Validate that threshold is smaller than number of owners.
+        // Validate that threshold is smaller than number of owners
         if (threshold > _ownerCount || threshold == 0) revert WrongInput();
 
         _threshold = threshold;

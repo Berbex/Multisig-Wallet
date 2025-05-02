@@ -13,10 +13,10 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
     /* solhint-enable private-vars-leading-underscore */
 
     // keccak256(
-    //     "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 nonce)"
+    //     "Tx(address to,uint256 value,bytes data,uint8 operation,uint256 nonce)"
     // );
     /* solhint-disable private-vars-leading-underscore */
-    bytes32 private constant SAFE_TX_TYPEHASH = 0x3317c908a134e5c2510760347e7f23b965536b042f3c71282a3d92e04a7b29f5;
+    bytes32 private constant TX_TYPEHASH = 0xf401b8236cad45775f550996814981af00732da2509e517cd452b7a93fc2ff7d;
     /* solhint-enable private-vars-leading-underscore */
 
     error NotEnoughGas();
@@ -89,7 +89,10 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
     function getTransactionHash(address to, uint256 value, bytes calldata data, Operation operation, uint256 _nonce) public view returns (bytes32 txHash) {
         bytes32 domainHash = domainSeparator();
 
-        txHash = keccak256(abi.encodePacked(domainHash, keccak256(abi.encode(SAFE_TX_TYPEHASH, to, value, keccak256(data), operation, _nonce))));
+        bytes32 calldataHash = keccak256(data);
+        bytes32 txHashStruct = keccak256(abi.encode(TX_TYPEHASH, to, value, calldataHash, operation, _nonce));
+
+        txHash = keccak256(abi.encodePacked("\x19\x01", domainHash, txHashStruct));
     }
 
     function approveHash(bytes32 hashToApprove) public override {
