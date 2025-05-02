@@ -1,5 +1,5 @@
 import {BigNumberish, BaseContract, ethers} from "ethers";
-import {HardhatEthersSigner} from "@nomicfoundation/hardhat-ethers/signers";
+import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 
 export const EIP712_TX_TYPE = {
     // "Tx(address to,uint256 value,bytes data,uint8 operation,uint256 nonce)"
@@ -57,10 +57,26 @@ export const buildTransaction = (transaction: Transaction): Transaction => {
     };
 };
 
-export const signTypedData = async (signer: HardhatEthersSigner, multiSigWalletAddress: string, tx: Transaction, chainId: BigNumberish): Promise<Signature> => {
+export const signTypedData = async (signer: SignerWithAddress, multiSigWalletAddress: string, tx: Transaction, chainId: BigNumberish): Promise<Signature> => {
     return {
         signer: signer.address,
         data: await signer.signTypedData({verifyingContract: multiSigWalletAddress, chainId: chainId}, EIP712_TX_TYPE, tx),
+    };
+};
+
+export const signHash = async (signer: SignerWithAddress, hash: string): Promise<Signature> => {
+    const typedDataHash = ethers.getBytes(hash);
+    return {
+        signer: signer.address,
+        data: (await signer.signMessage(typedDataHash)).replace(/1b$/, "1f").replace(/1c$/, "20"),
+    };
+};
+
+export const approveHash = async (signer: SignerWithAddress): Promise<Signature> => {
+    const signerAddress = await signer.getAddress();
+    return {
+        signer: signerAddress,
+        data: "0x000000000000000000000000" + signerAddress.slice(2) + "0000000000000000000000000000000000000000000000000000000000000000" + "01",
     };
 };
 
