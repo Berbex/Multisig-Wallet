@@ -7,25 +7,25 @@ import {HashManager} from "./HashManager.sol";
 
 /**
  * @title SignatureChecker - Performs operations to check if a signature is valid
+ * @dev This contract extends the HashManager contract to provide more options
+ *      for checking the validity of a signature
  */
 abstract contract SignatureChecker is HashManager, ISignatureValidatorConstants {
+    // Error codes
     error WrongOffset();
-
     error WrongSignatureLength();
-
     error WrongSignature();
 
     /**
-     * @notice Splits signature bytes into `uint8 v, bytes32 r, bytes32 s`.
-     * @dev Make sure to perform a bounds check for @param pos, to avoid out of bounds access on @param signatures
+     * @dev Splits signature bytes into `uint8 v, bytes32 r, bytes32 s`
+     *      Make sure to perform a bounds check for @param pos, to avoid out of bounds access on @param signatures
      *      The signature format is a compact form of {bytes32 r}{bytes32 s}{uint8 v}
-     *      Compact means uint8 is not padded to 32 bytes.
-     * @param pos Which signature to read.
-     *            A prior bounds check of this parameter should be performed, to avoid out of bounds access.
-     * @param signatures Concatenated {r, s, v} signatures.
-     * @return v Recovery ID or Safe signature type.
-     * @return r Output value r of the signature.
-     * @return s Output value s of the signature.
+     *      Compact means uint8 is not padded to 32 bytes
+     * @param pos Position of the signature in the concatenated signatures byte array
+     * @param signatures Concatenated {r, s, v} signatures
+     * @return v Recovery ID or MultiSigWallet signature type
+     * @return r Output value r of the signature
+     * @return s Output value s of the signature
      */
     function _signatureSplit(bytes calldata signatures, uint256 pos) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         bytes calldata signaturePosition = bytes(signatures[pos * 65:pos * 65 + 65]);
@@ -36,12 +36,10 @@ abstract contract SignatureChecker is HashManager, ISignatureValidatorConstants 
     }
 
     /**
-     * @notice Checks whether the contract signature is valid. Reverts otherwise.
-     * @dev This is extracted to a separate function for better compatibility with Certora's prover.
-     *      More info here: https://github.com/safe-global/safe-smart-account/pull/661
-     * @param smartContract Address of the owner used to sign the message
+     * @dev Checks whether the contract signature is valid. Reverts otherwise
+     * @param smartContract Address of the contract that should validate the signature
      * @param dataHash Hash of the data (could be either a message hash or transaction hash)
-     * @param signatures Signature data that should be verified.
+     * @param signatures Signatures concatenated and contract signature (EIP-1271) or approved hash
      * @param offset Offset to the start of the contract signature in the signatures byte array
      */
     function _checkContractSignature(address smartContract, bytes32 dataHash, bytes calldata signatures, uint256 offset) internal view {
@@ -59,6 +57,15 @@ abstract contract SignatureChecker is HashManager, ISignatureValidatorConstants 
         if (ISignatureValidator(smartContract).isValidSignature(dataHash, contractSignature) != EIP1271_MAGIC_VALUE) revert WrongSignature();
     }
 
+    /**
+     * @dev Recovers the signer of a message hash
+     * @param executor Address of the executor
+     * @param dataHash Hash of the data (could be either a message hash or transaction hash)
+     * @param signatures Signatures concatenated and contract signature (EIP-1271) or approved hash
+     * @param pos Position of the signature in the concatenated signatures byte array
+     * @param requiredSignatures Number of required signatures to authorize the transaction
+     * @return owner Address of the owner that signed the message
+     */
     function _recoverSigner(
         address executor,
         bytes32 dataHash,

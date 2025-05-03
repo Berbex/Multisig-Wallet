@@ -3,6 +3,9 @@ pragma solidity ^0.8.28;
 
 import {ISignatureValidatorConstants} from "./ISignatureValidatorConstants.sol";
 
+/**
+ * @title ISignatureValidator - abstract contract for EIP1271 signature validation
+ */
 abstract contract ISignatureValidator is ISignatureValidatorConstants {
     /**
      * @notice EIP1271 method to validate a signature
