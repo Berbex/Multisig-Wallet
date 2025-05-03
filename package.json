@@ -11,7 +11,13 @@
     "deploy": "npx hardhat deploy",
     "test": "npx hardhat test tests/index.spec.ts",
     "coverage": "cross-env hardhat coverage",
-    "lint": "prettier --write {contracts,tests,deploy,utils,scripts}/**/*.{sol,ts}"
+    "lint": "prettier --write {contracts,tests,deploy,utils,scripts}/**/*.{sol,ts}",
+    "deploy:multisig:sepolia": "yarn deploy --network sepolia --tags MultiSigWallet",
+    "multisig:build_tx:add_owner": "npx hardhat run scripts/buildTx_addOwner.ts --network sepolia",
+    "multisig:build_tx:transfer_funds": "npx hardhat run scripts/buildTx_transferFunds.ts --network sepolia",
+    "multisig:sign_tx": "npx hardhat run scripts/signTransaction.ts --network sepolia",
+    "multisig:execute_tx": "npx hardhat run scripts/executeTransaction.ts --network sepolia",
+    "multisig:owners": "npx hardhat run scripts/getOwners.ts --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",

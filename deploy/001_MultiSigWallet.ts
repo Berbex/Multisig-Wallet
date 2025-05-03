@@ -7,6 +7,8 @@ import {Owners, Threshold} from "../utils/constants";
 const version = "v1.0.0";
 const contractName = "MultiSigWallet";
 
+// Initial owners and threshold are set in the constants file
+
 const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const {deploy} = hre.deployments;
     const [deployer] = await ethers.getSigners();
