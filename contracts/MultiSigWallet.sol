@@ -6,6 +6,19 @@ import {HashManager} from "./base/HashManager.sol";
 import {SignatureChecker} from "./base/SignatureChecker.sol";
 import {IMultiSigWallet} from "./interfaces/IMultiSigWallet.sol";
 
+/**
+ * @title MultiSigWallet
+ * @notice This contract implements a multi-signature wallet
+ *         It allows multiple owners to approve transactions before they are executed.
+ *         The contract uses EIP-712 for hashing and signing
+ *         the transactions. The contract also supports the EIP-1271 standard for
+ *         validating signatures.
+ * @dev This implementation is designed to be used with a fixed number of owners and a
+ *      fixed threshold for the number of signatures required to execute a transaction.
+ *      The contract uses the OwnerManager and HashManager base contracts to manage
+ *      the owners and the hashes of the transactions. Also uses the SignatureChecker base contract
+ *      to check the signatures of the transactions.
+ */
 contract MultiSigWallet is OwnerManager, SignatureChecker, IMultiSigWallet {
     // keccak256(
     //     "EIP712Domain(uint256 chainId,address verifyingContract)"
