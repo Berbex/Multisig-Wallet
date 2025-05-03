@@ -2,7 +2,16 @@ import {expect} from "chai";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ethers} from "hardhat";
 
-import {buildContractCall, signTypedData, buildSignatureBytes, calculateTransactionHash, approveHash, Signature, signHash} from "../utils/execution";
+import {
+    buildContractCall,
+    buildTransaction,
+    signTypedData,
+    buildSignatureBytes,
+    calculateTransactionHash,
+    approveHash,
+    Signature,
+    signHash,
+} from "../utils/execution";
 
 import type {MultiSigWallet} from "../typechain-types";
 
@@ -286,6 +295,30 @@ export default async function suite(): Promise<void> {
                 expect(await multiSigWallet.isOwner(user2.address)).to.be.true;
                 expect(await multiSigWallet.isOwner(user1.address)).to.be.true;
                 expect(await multiSigWallet.isOwner(deployer.address)).to.be.true;
+            });
+
+            it("user can execute transaction to send ether from the wallet", async () => {
+                await deployer.sendTransaction({
+                    to: await multiSigWallet.getAddress(),
+                    value: 1,
+                });
+
+                const tx = buildTransaction({
+                    to: ethers.ZeroAddress,
+                    value: 1,
+                    data: "0x",
+                    operation: 0,
+                    nonce: 0,
+                });
+                const signature = await signTypedData(deployer, await multiSigWallet.getAddress(), tx, chainId);
+
+                const signatureBytes = buildSignatureBytes([signature]);
+
+                expect(await ethers.provider.getBalance(ethers.ZeroAddress)).to.equal(0);
+
+                await multiSigWallet.connect(user1).execTransaction(tx.to, tx.value, tx.data, tx.operation, signatureBytes);
+
+                expect(await ethers.provider.getBalance(ethers.ZeroAddress)).to.equal(1);
             });
 
             it("emits event when executing transaction", async () => {

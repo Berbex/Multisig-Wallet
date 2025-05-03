@@ -115,4 +115,6 @@ contract MultiSigWallet is OwnerManager, SignatureChecker, IMultiSigWallet {
             (success, result) = to.call{gas: txGas, value: value}(data);
         }
     }
+
+    receive() external payable {}
 }
