@@ -2,9 +2,11 @@
 pragma solidity ^0.8.28;
 
 import {OwnerManager} from "./base/OwnerManager.sol";
+import {HashManager} from "./base/HashManager.sol";
 import {SignatureChecker} from "./base/SignatureChecker.sol";
+import {IMultiSigWallet} from "./interfaces/IMultiSigWallet.sol";
 
-contract MultiSigWallet is OwnerManager, SignatureChecker {
+contract MultiSigWallet is OwnerManager, SignatureChecker, IMultiSigWallet {
     // keccak256(
     //     "EIP712Domain(uint256 chainId,address verifyingContract)"
     // );
@@ -19,25 +21,13 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
     bytes32 private constant TX_TYPEHASH = 0xf401b8236cad45775f550996814981af00732da2509e517cd452b7a93fc2ff7d;
     /* solhint-enable private-vars-leading-underscore */
 
-    error NotEnoughGas();
-
-    error ExecutionFailed();
-
-    event SuccessfulExecution(bytes32 indexed txHash);
-
-    event FailedExecution(bytes32 indexed txHash);
-
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-
     uint256 public nonce;
 
     constructor(address[] memory owners, uint256 threshold) {
         _setupOwners(owners, threshold);
     }
 
+    /// @inheritdoc IMultiSigWallet
     function execTransaction(address to, uint256 value, bytes calldata data, Operation operation, bytes calldata signatures) external payable {
         bytes32 txHash = getTransactionHash(to, value, data, operation, nonce++);
         checkSignatures(msg.sender, txHash, signatures);
@@ -64,6 +54,7 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
         emit SuccessfulExecution(txHash);
     }
 
+    /// @inheritdoc IMultiSigWallet
     function checkSignatures(address executor, bytes32 dataHash, bytes calldata signatures) public view {
         uint256 nSignatures = _threshold;
 
@@ -80,12 +71,14 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
         }
     }
 
+    /// @inheritdoc IMultiSigWallet
     function domainSeparator() public view returns (bytes32) {
         uint256 chainId = block.chainid;
 
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, chainId, this));
     }
 
+    /// @inheritdoc IMultiSigWallet
     function getTransactionHash(address to, uint256 value, bytes calldata data, Operation operation, uint256 _nonce) public view returns (bytes32 txHash) {
         bytes32 domainHash = domainSeparator();
 
@@ -95,22 +88,23 @@ contract MultiSigWallet is OwnerManager, SignatureChecker {
         txHash = keccak256(abi.encodePacked("\x19\x01", domainHash, txHashStruct));
     }
 
-    function approveHash(bytes32 hashToApprove) public override {
+    /// @inheritdoc IMultiSigWallet
+    function approveHash(bytes32 hashToApprove) public override(IMultiSigWallet, HashManager) {
         if (_owners[msg.sender] == address(0)) revert WrongOwnerAddress();
 
         super.approveHash(hashToApprove);
     }
 
     /**
-     * @notice Executes either a delegatecall or a call with provided parameters.
+     * @notice Executes either a delegatecall or a call with provided parameters
      * @dev This method doesn't perform any sanity check of the transaction, such as:
      *      - if the contract at `to` address has code or not
      *      It is the responsibility of the caller to perform such checks.
-     * @param to Destination address.
-     * @param value Ether value.
-     * @param data Data payload.
-     * @param operation Operation type.
-     * @return success boolean flag indicating if the call succeeded.
+     * @param to Destination address
+     * @param value Ether value
+     * @param data Data payload
+     * @param operation Operation type
+     * @return success boolean flag indicating if the call succeeded
      */
     function _execute(address to, uint256 value, bytes memory data, Operation operation, uint256 txGas) internal returns (bool success, bytes memory result) {
         if (operation == Operation.DelegateCall) {
