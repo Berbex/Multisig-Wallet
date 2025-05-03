@@ -203,6 +203,31 @@ export default async function suite(): Promise<void> {
                 expect(await multiSigWallet.isOwner(user1.address)).to.be.true;
             });
 
+            it("owner can execute delegate call transaction", async () => {
+                const DelegateCallVerifier = await ethers.getContractFactory("DelegateCallVerifier");
+                const delegateCallVerifier = await DelegateCallVerifier.deploy();
+
+                const tx = await buildContractCall(delegateCallVerifier, "verifyDelegateCall", [await delegateCallVerifier.getAddress()], 0, 0, true);
+                const signature = await signTypedData(deployer, await multiSigWallet.getAddress(), tx, chainId);
+
+                const signatureBytes = buildSignatureBytes([signature]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx.to, tx.value, tx.data, tx.operation, signatureBytes);
+
+                expect(await delegateCallVerifier.caller()).to.equal(await multiSigWallet.getAddress());
+
+                // Perform a second call to the same function to check if the caller delegateCallVerifier and not the multiSigWallet
+
+                const tx2 = await buildContractCall(delegateCallVerifier, "verifyDelegateCall", [await delegateCallVerifier.getAddress()], 0, 1);
+                const signature2 = await signTypedData(deployer, await multiSigWallet.getAddress(), tx2, chainId);
+
+                const signatureBytes2 = buildSignatureBytes([signature2]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx2.to, tx2.value, tx2.data, tx2.operation, signatureBytes2);
+
+                expect(await delegateCallVerifier.caller()).to.equal(await delegateCallVerifier.getAddress());
+            });
+
             it("emits event when executing transaction", async () => {
                 const tx = await buildContractCall(multiSigWallet, "addOwner", [user1.address], 0, 0);
                 const signature = await signTypedData(deployer, await multiSigWallet.getAddress(), tx, chainId);
