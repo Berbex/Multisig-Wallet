@@ -11,6 +11,7 @@ export default async function suite(): Promise<void> {
         let multiSigWallet: MultiSigWallet;
         let deployer: SignerWithAddress;
         let user1: SignerWithAddress;
+        let user2: SignerWithAddress;
 
         let chainId: bigint;
 
@@ -19,7 +20,7 @@ export default async function suite(): Promise<void> {
         before(async function () {
             multiSigWallet = await ethers.getContract("MultiSigWallet");
 
-            [deployer, user1] = await ethers.getSigners();
+            [deployer, user1, user2] = await ethers.getSigners();
 
             chainId = (await ethers.provider.getNetwork()).chainId;
         });
@@ -226,6 +227,65 @@ export default async function suite(): Promise<void> {
                 await multiSigWallet.connect(user1).execTransaction(tx2.to, tx2.value, tx2.data, tx2.operation, signatureBytes2);
 
                 expect(await delegateCallVerifier.caller()).to.equal(await delegateCallVerifier.getAddress());
+            });
+
+            it("user can not execute transaction if has not enough signatures", async () => {
+                const tx = await buildContractCall(multiSigWallet, "addOwner", [user1.address], 0, 0);
+                const signature = await signTypedData(deployer, await multiSigWallet.getAddress(), tx, chainId);
+
+                const signatureBytes = buildSignatureBytes([signature]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx.to, tx.value, tx.data, tx.operation, signatureBytes);
+
+                const tx2 = await buildContractCall(multiSigWallet, "changeThreshold", [2], 0, 1);
+                const signature2 = await signTypedData(deployer, await multiSigWallet.getAddress(), tx2, chainId);
+
+                const signatureBytes2 = buildSignatureBytes([signature2]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx2.to, tx2.value, tx2.data, tx2.operation, signatureBytes2);
+
+                const tx3 = await buildContractCall(multiSigWallet, "addOwner", [user2.address], 0, 2);
+                const signature3_1 = await signTypedData(deployer, await multiSigWallet.getAddress(), tx3, chainId);
+
+                const signatureBytes3 = buildSignatureBytes([signature3_1]); // Missing signature from user1
+
+                await expect(
+                    multiSigWallet.connect(user1).execTransaction(tx3.to, tx3.value, tx3.data, tx3.operation, signatureBytes3)
+                ).to.be.revertedWithCustomError(multiSigWallet, "WrongSignatureLength");
+
+                const signatureBytes4 = buildSignatureBytes([signature3_1, signature3_1]); // Reaching the correct length but not the correct signatures
+
+                await expect(
+                    multiSigWallet.connect(user1).execTransaction(tx3.to, tx3.value, tx3.data, tx3.operation, signatureBytes4)
+                ).to.be.revertedWithCustomError(multiSigWallet, "WrongSignature");
+            });
+
+            it("user can execute transaction if has enough signatures", async () => {
+                const tx = await buildContractCall(multiSigWallet, "addOwner", [user1.address], 0, 0);
+                const signature = await signTypedData(deployer, await multiSigWallet.getAddress(), tx, chainId);
+
+                const signatureBytes = buildSignatureBytes([signature]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx.to, tx.value, tx.data, tx.operation, signatureBytes);
+
+                const tx2 = await buildContractCall(multiSigWallet, "changeThreshold", [2], 0, 1);
+                const signature2 = await signTypedData(deployer, await multiSigWallet.getAddress(), tx2, chainId);
+
+                const signatureBytes2 = buildSignatureBytes([signature2]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx2.to, tx2.value, tx2.data, tx2.operation, signatureBytes2);
+
+                const tx3 = await buildContractCall(multiSigWallet, "addOwner", [user2.address], 0, 2);
+                const signature3_1 = await signTypedData(deployer, await multiSigWallet.getAddress(), tx3, chainId);
+                const signature3_2 = await signTypedData(user1, await multiSigWallet.getAddress(), tx3, chainId);
+
+                const signatureBytes3 = buildSignatureBytes([signature3_1, signature3_2]);
+
+                await multiSigWallet.connect(user1).execTransaction(tx3.to, tx3.value, tx3.data, tx3.operation, signatureBytes3);
+
+                expect(await multiSigWallet.isOwner(user2.address)).to.be.true;
+                expect(await multiSigWallet.isOwner(user1.address)).to.be.true;
+                expect(await multiSigWallet.isOwner(deployer.address)).to.be.true;
             });
 
             it("emits event when executing transaction", async () => {
